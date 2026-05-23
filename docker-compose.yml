@@ -1,0 +1,25 @@
+version: '3.9'
+services:
+  wifi-densepose:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: ruview-backend:local
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEMO_MODE=true
+      - SECRET_KEY=changeme
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: ruview-frontend:local
+    ports:
+      - "3000:80"
+    depends_on:
+      - wifi-densepose
+    restart: unless-stopped

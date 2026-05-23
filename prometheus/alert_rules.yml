@@ -1,0 +1,11 @@
+groups:
+  - name: ruview.rules
+    rules:
+      - alert: HighErrorRate
+        expr: increase(http_requests_total{job="ruview"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: page
+        annotations:
+          summary: "High request rate for ruview"
+          description: "{{ $labels.job }} saw >10 requests in 5m"

@@ -1,0 +1,12 @@
+app = "my-ruview-app"
+primary_region = "iad"
+
+[build]
+  builder = "pack"
+
+[env]
+  ENVIRONMENT = "production"
+  DEMO_MODE = "true"
+
+[experimental]
+  auto_rollback = true

@@ -1,0 +1,24 @@
+# Render services configuration: backend as a Docker web service
+services:
+  - type: web
+    name: ruview-sensing-server
+    env: docker
+    dockerfilePath: ./Dockerfile.backend
+    plan: free
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEMO_MODE
+        value: "true"
+      - key: SECRET_KEY
+        generateValue: true
+    healthCheckPath: /health
+
+# Static site configuration: Render can host the frontend as a static site.
+# Replace `repo` with your GitHub repo URL when creating the site on Render.
+static_sites:
+  - name: ruview-frontend
+    repo: https://github.com/<YOUR_GITHUB_USERNAME_OR_ORG>/<REPO>
+    branch: main
+    buildCommand: "echo 'no build step; serving frontend/ directory'"
+    publishDirectory: frontend
