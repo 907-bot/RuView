@@ -22,11 +22,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.on_event("startup")
-def _startup():
+# Instrument prometheus before the application starts (must not add middleware during startup)
+try:
     Instrumentator().instrument(app).expose(app)
     logger.info("Prometheus instrumentation enabled")
+except Exception:
+    # If instrumentation fails for any reason at import time, log and continue.
+    logger.exception("Prometheus instrumentation failed to initialize")
 
 
 @app.get("/health")
