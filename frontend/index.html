@@ -53,7 +53,9 @@
     function pushVital(bpm){const now=new Date().toLocaleTimeString();chart.data.labels.push(now);chart.data.datasets[0].data.push(bpm);if(chart.data.labels.length>60){chart.data.labels.shift();chart.data.datasets[0].data.shift()}chart.update('none')}
 
     // WebSocket to backend
-    const WS_URL = (location.protocol==='https:'?'wss://':'ws://') + location.hostname + ':8000/ws/pose';
+    // The backend URL is supplied at build time via a small config script that sets window.__ENV
+    const backendBase = (window.__ENV && window.__ENV.BACKEND_URL) || ((location.protocol==='https:')?(location.origin.replace(location.port, '8000')):(location.origin.replace(location.port, '8000')));
+    const WS_URL = (backendBase.startsWith('https') ? backendBase.replace(/^https/, 'wss') : backendBase.replace(/^http/, 'ws')) + '/ws/pose';
     const ws = new WebSocket(WS_URL);
     ws.onopen = ()=> document.getElementById('status').textContent = 'Live';
     ws.onclose = ()=> document.getElementById('status').textContent = 'Reconnecting…';

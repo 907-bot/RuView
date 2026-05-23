@@ -15,5 +15,7 @@ Next steps:
 2. Install pre-commit hooks: `pip install pre-commit && pre-commit install`
 3. Push to a Git repository and let the CI build + publish images.
 4. Frontend GitHub Pages: the repo includes a workflow to publish the `frontend/` directory to the `gh-pages` branch on push to `main`. Enable GitHub Pages from your repo settings (use `gh-pages` branch).
-4. Set secrets in GitHub: `FLY_API_TOKEN` (used by CI to deploy to Fly)
+5. Set secrets in GitHub:
+   - `FLY_API_TOKEN` (used by CI to deploy to Fly)
+   - `BACKEND_URL` (used by the Pages workflow to generate frontend/config.js so the static site knows where to reach the backend; e.g. `https://ruview-sensing-server.onrender.com`)
 5. Deploy to Fly.io / Render / Railway using the provided examples in SKILL.md
