@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>RuView Demo Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0}
+    body{font-family:Inter,ui-sans-serif,system-ui,Arial;background:#0a0a0f;color:#e6eef8}
+    #canvas-3d{width:100%;height:60vh;display:block}
+    #vitals{display:flex;gap:1rem;padding:1rem}
+    .metric{background:#111;border:1px solid #222;padding:1rem;flex:1}
+    .metric .val{font-size:2rem;font-weight:700;color:#4ade80}
+    .metric .label{font-size:.75rem;color:#999;margin-top:.25rem}
+    #status{position:fixed;top:10px;right:10px;font-size:12px;background:#111;padding:6px 12px;border-radius:6px}
+  </style>
+</head>
+<body>
+  <div id="status">Connecting…</div>
+  <canvas id="canvas-3d"></canvas>
+  <div id="vitals">
+    <div class="metric"><div class="val" id="bpm-breath">--</div><div class="label">Breathing BPM</div></div>
+    <div class="metric"><div class="val" id="bpm-heart">--</div><div class="label">Heart Rate BPM</div></div>
+    <div class="metric"><div class="val" id="activity">--</div><div class="label">Activity</div></div>
+    <div class="metric"><div class="val" id="occupancy">--</div><div class="label">People</div></div>
+  </div>
+
+  <canvas id="vitals-chart" style="width:100%;height:200px;padding:1rem"></canvas>
+
+  <script>
+    // Three.js skeleton (simplified from SKILL.md)
+    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('canvas-3d'), antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+    renderer.setClearColor(0x0a0a0f);
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / (window.innerHeight * 0.6), 0.1, 100);
+    camera.position.set(0,1,3);camera.lookAt(0,1,0);
+    const SKELETON_EDGES = [[0,1],[0,2],[1,3],[2,4],[5,6],[5,7],[7,9],[6,8],[8,10],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+    const joints=[];const bones=[];
+    for(let i=0;i<17;i++){const mesh=new THREE.Mesh(new THREE.SphereGeometry(0.025,8,8),new THREE.MeshBasicMaterial({color:0x4ade80}));scene.add(mesh);joints.push(mesh);} 
+    SKELETON_EDGES.forEach(()=>{const geo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0x22c55e}));scene.add(line);bones.push(line)});
+    scene.add(new THREE.AmbientLight(0xffffff,0.8));
+    function updateSkeleton(keypoints){keypoints.forEach((kp,i)=>{if(joints[i]){joints[i].position.set((kp.x-0.5)*2,(1-kp.y)*2,0);joints[i].visible=kp.confidence>0.3}});SKELETON_EDGES.forEach(([a,b],i)=>{const pts=[joints[a].position.clone(),joints[b].position.clone()];bones[i].geometry.setFromPoints(pts);bones[i].geometry.attributes.position.needsUpdate=true;bones[i].visible=joints[a].visible&&joints[b].visible})}
+    function animate(){requestAnimationFrame(animate);renderer.render(scene,camera)}animate();
+    window.addEventListener('resize',()=>{renderer.setSize(window.innerWidth,window.innerHeight*0.6);camera.aspect=window.innerWidth/(window.innerHeight*0.6);camera.updateProjectionMatrix()});
+
+    // Chart.js — heart rate rolling 60s
+    const ctx = document.getElementById('vitals-chart').getContext('2d');
+    const chart = new Chart(ctx, {type:'line',data:{labels:[],datasets:[{label:'Heart Rate (BPM)',data:[],borderColor:'#f97316',borderWidth:1.5,pointRadius:0,tension:0.4}]},options:{animation:false,scales:{y:{min:40,max:120}},plugins:{legend:{display:false}}}});
+    function pushVital(bpm){const now=new Date().toLocaleTimeString();chart.data.labels.push(now);chart.data.datasets[0].data.push(bpm);if(chart.data.labels.length>60){chart.data.labels.shift();chart.data.datasets[0].data.shift()}chart.update('none')}
+
+    // WebSocket to backend
+    // The backend URL is supplied at build time via a small config script that sets window.__ENV
+    const backendBase = (window.__ENV && window.__ENV.BACKEND_URL) || ((location.protocol==='https:')?(location.origin.replace(location.port, '8000')):(location.origin.replace(location.port, '8000')));
+    const WS_URL = (backendBase.startsWith('https') ? backendBase.replace(/^https/, 'wss') : backendBase.replace(/^http/, 'ws')) + '/ws/pose';
+    const ws = new WebSocket(WS_URL);
+    ws.onopen = ()=> document.getElementById('status').textContent = 'Live';
+    ws.onclose = ()=> document.getElementById('status').textContent = 'Reconnecting…';
+    ws.onerror = ()=> console.debug('ws error');
+    ws.onmessage = ({data})=>{
+      try{
+        const frame = JSON.parse(data);
+        document.getElementById('occupancy').textContent = frame.occupancy_count ?? 0;
+        if(frame.persons && frame.persons.length>0){const p=frame.persons[0];updateSkeleton(p.keypoints);document.getElementById('bpm-breath').textContent = p.vitals?.breathing_bpm?.toFixed(1) ?? '--';document.getElementById('bpm-heart').textContent = p.vitals?.heart_rate_bpm?.toFixed(0) ?? '--';document.getElementById('activity').textContent = p.vitals?.activity ?? '--';pushVital(p.vitals?.heart_rate_bpm ?? null)}
+      }catch(e){console.debug('invalid frame',e)}
+    };
+  </script>
+</body>
+</html>
