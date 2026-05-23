@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -15,9 +18,19 @@ jobs:
           export BACKEND_URL=${{ secrets.BACKEND_URL }}
           ./frontend/build-config.sh
 
+      - name: Choose token for pushing
+        id: choose_token
+        run: |
+          # Prefer a user-created PAT (GH_PAGES_PAT) if provided, otherwise fall back to GITHUB_TOKEN
+          if [ -n "${{ secrets.GH_PAGES_PAT }}" ]; then
+            echo "token=${{ secrets.GH_PAGES_PAT }}" >> $GITHUB_OUTPUT
+          else
+            echo "token=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Deploy to Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ steps.choose_token.outputs.token }}
           publish_dir: ./frontend
           publish_branch: gh-pages
