@@ -12,5 +12,7 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY backend /app/backend
+COPY backend/entrypoint.sh /app/backend/entrypoint.sh
+RUN chmod +x /app/backend/entrypoint.sh
 EXPOSE 8000
-CMD ["gunicorn", "-c", "backend/gunicorn_conf.py", "backend.main:app"]
+CMD ["/app/backend/entrypoint.sh"]

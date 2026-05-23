@@ -3,5 +3,5 @@ uvicorn[standard]>=0.22
 uvloop
 python-multipart
 prometheus-fastapi-instrumentator
-gunicorn
+gunicorn==20.1.0
 psutil
