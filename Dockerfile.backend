@@ -11,6 +11,12 @@ FROM python:3.11-slim as runtime
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY --from=build /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=build /usr/local/bin /usr/local/bin
+# Ensure requirements are installed in the runtime image as well — this is more robust
+COPY backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy application code
 COPY backend /app/backend
 COPY backend/entrypoint.sh /app/backend/entrypoint.sh
 RUN chmod +x /app/backend/entrypoint.sh
