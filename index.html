@@ -54,8 +54,21 @@
 
     // WebSocket to backend
     // The backend URL is supplied at build time via a small config script that sets window.__ENV
-    const backendBase = (window.__ENV && window.__ENV.BACKEND_URL) || ((location.protocol==='https:')?(location.origin.replace(location.port, '8000')):(location.origin.replace(location.port, '8000')));
-    const WS_URL = (backendBase.startsWith('https') ? backendBase.replace(/^https/, 'wss') : backendBase.replace(/^http/, 'ws')) + '/ws/pose';
+    // Build the WebSocket URL safely:
+    // 1) If BACKEND_URL is provided (e.g. https://ruview-sensing-server.onrender.com), convert its scheme to ws/wss and append /ws/pose
+    // 2) Otherwise, fall back to same host on port 8000
+    const envBackend = (window.__ENV && window.__ENV.BACKEND_URL) ? String(window.__ENV.BACKEND_URL).replace(/\/$/, '') : null;
+    let WS_URL;
+    if (envBackend) {
+      // convert http(s) -> ws(s)
+      WS_URL = envBackend.replace(/^https:\/\//i, 'wss://').replace(/^http:\/\//i, 'ws://') + '/ws/pose';
+    } else {
+      const host = location.hostname;
+      const protocol = location.protocol === 'https:' ? 'wss://' : 'ws://';
+      // If a port is present in the URL, use it; otherwise default to 8000
+      const port = location.port ? `:${location.port}` : ':8000';
+      WS_URL = `${protocol}${host}${port}/ws/pose`;
+    }
     const ws = new WebSocket(WS_URL);
     ws.onopen = ()=> document.getElementById('status').textContent = 'Live';
     ws.onclose = ()=> document.getElementById('status').textContent = 'Reconnecting…';
