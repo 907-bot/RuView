@@ -22,5 +22,6 @@ static_sites:
   - name: ruview-frontend
     repo: https://github.com/<YOUR_GITHUB_USERNAME_OR_ORG>/<REPO>
     branch: main
-    buildCommand: "echo 'no build step; serving frontend/ directory'"
+    # Use a safe build command without nested single quotes to avoid shell quoting issues
+    buildCommand: bash frontend/build-config.sh && echo "build-config done"
     publishDirectory: frontend
